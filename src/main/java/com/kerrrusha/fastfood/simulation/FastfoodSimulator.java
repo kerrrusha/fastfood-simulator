@@ -13,7 +13,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
@@ -65,14 +64,17 @@ public class FastfoodSimulator {
      */
     private final double kEnd;
 
-    private final Duration simulationTime = Duration.of(100, TIME_UNIT);
+    private final Duration simulationTime = Duration.of(1000, TIME_UNIT);
     private final boolean generateEntitiesAtSimulationStartup = true;
     private final Random random = new Random();
 
     private final Deque<GeneratedOrder> ordersHistory = new LinkedList<>();
-    private final PriorityQueueV2<GeneratedOrder> acceptedOrdersQueue = new PriorityQueueV2<>(
-            Comparator.comparing(generatedOrder -> generatedOrder.getOrder().orderType())
-    );
+    private final PriorityQueueV2<GeneratedOrder> acceptedOrdersQueue = new PriorityQueueV2<>() {
+        @Override
+        public boolean isPrioritizedElement(GeneratedOrder element) {
+            return element.getOrder().orderType() == OrderType.DRIVE_IN;
+        }
+    };
     private final List<GeneratedOrder> declinedOrders = new ArrayList<>();
     private final List<ProcessableOrder> ordersInProcessing = new ArrayList<>();
     private final Deque<CompletableOrder> completedOrders = new LinkedList<>();

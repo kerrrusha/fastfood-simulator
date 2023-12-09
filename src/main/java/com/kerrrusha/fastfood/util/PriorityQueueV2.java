@@ -1,38 +1,40 @@
 package com.kerrrusha.fastfood.util;
 
+
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
-public class PriorityQueueV2<T> {
+public abstract class PriorityQueueV2<T> {
     private final List<T> elements = new ArrayList<>();
-    private final Comparator<T> comparator;
-
-    public PriorityQueueV2(Comparator<T> comparator) {
-        this.comparator = comparator;
-    }
 
     public boolean add(T element) {
         return elements.add(element);
     }
 
+    /**
+     * @return first prioritized element if exists, else - first element to out (FIFO)
+     */
     public T peek() {
         if (isEmpty()) {
             throw new UnsupportedOperationException("Can't poll element - queue is empty.");
         }
-        trySortElementsByPriority();
-        return elements.get(elements.size() - 1);
-    }
 
-    public boolean remove(T element) {
-        return elements.remove(element);
-    }
-
-    private void trySortElementsByPriority() {
-        if (comparator == null) {
-            return;
+        for (T element : elements) {
+            if (isPrioritizedElement(element)) {
+                return element;
+            }
         }
-        elements.sort(comparator);
+
+        return elements.get(0);
+    }
+
+    /**
+     * This method should mark some elements as more prioritized than others
+     */
+    public abstract boolean isPrioritizedElement(T element);
+
+    public void remove(T element) {
+        elements.remove(element);
     }
 
     public int size() {
