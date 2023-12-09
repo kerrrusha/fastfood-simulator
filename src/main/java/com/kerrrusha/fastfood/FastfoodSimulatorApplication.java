@@ -15,6 +15,7 @@ public class FastfoodSimulatorApplication {
         double kEnd = 0.6;
 
         SimulationResult simulationResult = new FastfoodSimulator(Nwmax, Tdd, Tdp, Tc, Tp, kStart, kEnd).simulate();
+        System.out.println();
         System.out.println(simulationResult);
     }
 }

@@ -1,10 +1,15 @@
 package com.kerrrusha.fastfood.simulation;
 
+import com.kerrrusha.fastfood.simulation.model.CompletableOrder;
+import com.kerrrusha.fastfood.simulation.model.GeneratedOrder;
+import com.kerrrusha.fastfood.simulation.model.OrderType;
+import com.kerrrusha.fastfood.simulation.model.ProcessableOrder;
 import com.kerrrusha.fastfood.util.PriorityQueueV2;
 import com.kerrrusha.fastfood.util.TimeInterval;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -18,10 +23,12 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.kerrrusha.fastfood.util.SimulatorUtils.sleepFor;
+import static java.time.ZoneId.systemDefault;
 
 @Slf4j
 public class FastfoodSimulator {
+    private static final ChronoUnit TIME_UNIT = ChronoUnit.MILLIS;
+    private static final int MAX_PARALLEL_ORDERS_IN_PROCESS = 1;
 
     /**
      * Кількість замовлень в очікуванні, при досяганні якої заклад перестає приймати нові замовлення
@@ -58,7 +65,7 @@ public class FastfoodSimulator {
      */
     private final double kEnd;
 
-    private final Duration simulationTime = Duration.of(100, ChronoUnit.SECONDS);
+    private final Duration simulationTime = Duration.of(100, TIME_UNIT);
     private final boolean generateEntitiesAtSimulationStartup = true;
     private final Random random = new Random();
 
@@ -67,6 +74,7 @@ public class FastfoodSimulator {
             Comparator.comparing(generatedOrder -> generatedOrder.getOrder().orderType())
     );
     private final List<GeneratedOrder> declinedOrders = new ArrayList<>();
+    private final List<ProcessableOrder> ordersInProcessing = new ArrayList<>();
     private final Deque<CompletableOrder> completedOrders = new LinkedList<>();
 
     private boolean orderAcceptingIsBlocked = false;
@@ -85,7 +93,7 @@ public class FastfoodSimulator {
         this.kStart = kStart;
         this.kEnd = kEnd;
 
-        completeNextOrderAfter = Duration.of(getRandomTime(Tp), ChronoUnit.SECONDS);
+        completeNextOrderAfter = Duration.of(getRandomTime(Tp), TIME_UNIT);
     }
 
     public SimulationResult simulate() {
@@ -96,9 +104,6 @@ public class FastfoodSimulator {
         log.info("Simulation is started.");
         while ((currentTime = LocalDateTime.now()).isBefore(endTime)) {
             doSimulationStep(startTime, currentTime);
-
-            sleepFor(1);
-
             updateStats();
         }
         log.info("Simulation is finished.");
@@ -130,27 +135,35 @@ public class FastfoodSimulator {
 
         updateAcceptingOrdersBlocking();
         processGeneratedOrders(generatedOrders);
-        processAcceptedOrders(startTime, currentTime);
+        processAcceptedOrders();
     }
 
-    private void processAcceptedOrders(LocalDateTime startTime, LocalDateTime currentTime) {
-        CompletableOrder lastProcessedOrder = completedOrders.peek();
-        GeneratedOrder orderToProcess = acceptedOrdersQueue.poll();
+    private void processAcceptedOrders() {
+        GeneratedOrder orderToProcess = acceptedOrdersQueue.peek();
         if (orderToProcess == null) {
             return;
         }
 
-        if ((lastProcessedOrder == null && currentTime.isAfter(startTime.plus(completeNextOrderAfter)))
-                || (lastProcessedOrder != null && currentTime.isAfter(lastProcessedOrder.getCompletedAt().plus(completeNextOrderAfter)))) {
-            updateCompleteNextOrderAfter();
+        if (ordersInProcessing.size() > MAX_PARALLEL_ORDERS_IN_PROCESS) {
+            return;
+        }
 
-            completedOrders.add(new CompletableOrder(orderToProcess));
-            log.info("Order is completed.");
+        acceptedOrdersQueue.remove(orderToProcess);
+        ordersInProcessing.add(new ProcessableOrder(orderToProcess));
+
+        for (int i = 0; i < ordersInProcessing.size(); i++) {
+            ProcessableOrder orderInProcess = ordersInProcessing.get(i);
+            if (Duration.of(orderInProcess.getProcessingTime(TIME_UNIT), TIME_UNIT).compareTo(completeNextOrderAfter) > 0) {
+                updateCompleteNextOrderAfter();
+                ordersInProcessing.remove(orderInProcess);
+                completedOrders.add(new CompletableOrder(orderInProcess));
+                log.info(orderInProcess.getOrder().orderType() + " order is completed.");
+            }
         }
     }
 
     private void updateCompleteNextOrderAfter() {
-        completeNextOrderAfter = Duration.of(getRandomTime(Tp), ChronoUnit.SECONDS);
+        completeNextOrderAfter = Duration.of(getRandomTime(Tp), TIME_UNIT);
     }
 
     private void processGeneratedOrders(Queue<GeneratedOrder> generatedOrders) {
@@ -185,7 +198,7 @@ public class FastfoodSimulator {
     }
 
     private void updateGenerateNextDriveInOrderAfter(LocalDateTime startTime, LocalDateTime currentTime) {
-        generateNextDriveInOrderAfter = Duration.of(getRandomTime(isTimePeek(startTime, currentTime) ? Tdp : Tdd), ChronoUnit.SECONDS);
+        generateNextDriveInOrderAfter = Duration.of(getRandomTime(isTimePeek(startTime, currentTime) ? Tdp : Tdd), TIME_UNIT);
     }
 
     private void updateAcceptingOrdersBlocking() {
@@ -219,12 +232,24 @@ public class FastfoodSimulator {
     }
 
     private void updateGenerateNextRegularCashOrderAfter() {
-        generateNextRegularCashOrderAfter = Duration.of(getRandomTime(Tc), ChronoUnit.SECONDS);
+        generateNextRegularCashOrderAfter = Duration.of(getRandomTime(Tc), TIME_UNIT);
     }
 
     private boolean isTimePeek(LocalDateTime startTime, LocalDateTime currentTime) {
-        LocalDateTime timePeekStartTime = startTime.plus(Duration.of((long) (simulationTime.toSeconds() * kStart), ChronoUnit.SECONDS));
-        LocalDateTime timePeekEndTime = startTime.plus(Duration.of((long) (simulationTime.toSeconds() * kEnd), ChronoUnit.SECONDS));
+        LocalDateTime endTime = startTime.plus(simulationTime);
+
+        long startTimeEpochMilli = startTime.atZone(systemDefault()).toInstant().toEpochMilli();
+        long endTimeEpochMilli = endTime.atZone(systemDefault()).toInstant().toEpochMilli();
+
+        LocalDateTime timePeekStartTime = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli((long) (startTimeEpochMilli + (endTimeEpochMilli - startTimeEpochMilli) * kStart)),
+                systemDefault()
+        );
+        LocalDateTime timePeekEndTime = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli((long) (startTimeEpochMilli + (endTimeEpochMilli - startTimeEpochMilli) * kEnd)),
+                systemDefault()
+        );
+
         boolean result = timePeekStartTime.isBefore(currentTime) && timePeekEndTime.isAfter(currentTime);
         
         if (result) {
@@ -260,7 +285,7 @@ public class FastfoodSimulator {
     private double calculateAvgWaitingTimeDriveInAmount() {
         return completedOrders.stream()
                 .filter(completableOrder -> completableOrder.getOrder().orderType() == OrderType.DRIVE_IN)
-                .map(CompletableOrder::getCompletionTime)
+                .map(completableOrder -> completableOrder.getCompletionTime(TIME_UNIT))
                 .mapToLong(l -> l)
                 .average()
                 .orElse(-1);
@@ -269,7 +294,7 @@ public class FastfoodSimulator {
     private double calculateAvgWaitingTimeRegularCashAmount() {
         return completedOrders.stream()
                 .filter(completableOrder -> completableOrder.getOrder().orderType() == OrderType.REGULAR_CASH)
-                .map(CompletableOrder::getCompletionTime)
+                .map(completableOrder -> completableOrder.getCompletionTime(TIME_UNIT))
                 .mapToLong(l -> l)
                 .average()
                 .orElse(-1);

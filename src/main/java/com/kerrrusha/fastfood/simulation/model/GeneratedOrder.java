@@ -1,4 +1,4 @@
-package com.kerrrusha.fastfood.simulation;
+package com.kerrrusha.fastfood.simulation.model;
 
 import lombok.Getter;
 

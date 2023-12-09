@@ -3,9 +3,13 @@ package com.kerrrusha.fastfood.simulation;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.text.DecimalFormat;
+
 @Getter
 @RequiredArgsConstructor
 public class SimulationResult {
+    private static final DecimalFormat decimalFormat = new DecimalFormat("#.###");
+
     /**
      * Середня кількість замовлень в очікуванні
      */
@@ -28,9 +32,9 @@ public class SimulationResult {
 
     @Override
     public String toString() {
-        return "Середня кількість замовлень в очікуванні NwAvg=" + NwAvg +
-                ",\n Середній час очікування замовлень з драйв-ін TwdAvg=" + TwdAvg +
-                ",\n Середній час очікування замовлень з каси TwcAvg=" + TwcAvg +
-                ",\n Кількість пропущених замовлень Nf=" + Nf;
+        return "Середня кількість замовлень в очікуванні NwAvg=" + decimalFormat.format(NwAvg) +
+                ",\nСередній час очікування замовлень з драйв-ін TwdAvg=" + decimalFormat.format(TwdAvg) +
+                ",\nСередній час очікування замовлень з каси TwcAvg=" + decimalFormat.format(TwcAvg) +
+                ",\nКількість пропущених замовлень Nf=" + decimalFormat.format(Nf);
     }
 }

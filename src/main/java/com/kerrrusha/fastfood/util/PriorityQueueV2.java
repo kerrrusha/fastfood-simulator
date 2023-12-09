@@ -16,12 +16,16 @@ public class PriorityQueueV2<T> {
         return elements.add(element);
     }
 
-    public T poll() {
+    public T peek() {
         if (isEmpty()) {
             throw new UnsupportedOperationException("Can't poll element - queue is empty.");
         }
         trySortElementsByPriority();
         return elements.get(elements.size() - 1);
+    }
+
+    public boolean remove(T element) {
+        return elements.remove(element);
     }
 
     private void trySortElementsByPriority() {

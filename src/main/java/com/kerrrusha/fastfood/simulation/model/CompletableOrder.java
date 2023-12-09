@@ -1,4 +1,4 @@
-package com.kerrrusha.fastfood.simulation;
+package com.kerrrusha.fastfood.simulation.model;
 
 import lombok.Getter;
 
@@ -14,7 +14,7 @@ public class CompletableOrder extends GeneratedOrder {
         this.completedAt = LocalDateTime.now();
     }
 
-    public long getCompletionTime() {
-        return ChronoUnit.SECONDS.between(getCreatedAt(), getCompletedAt());
+    public long getCompletionTime(ChronoUnit chronoUnit) {
+        return chronoUnit.between(getCreatedAt(), completedAt);
     }
 }
