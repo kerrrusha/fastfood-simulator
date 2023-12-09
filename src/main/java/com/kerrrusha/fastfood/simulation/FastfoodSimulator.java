@@ -263,7 +263,7 @@ public class FastfoodSimulator {
                 .map(CompletableOrder::getCompletionTime)
                 .mapToLong(l -> l)
                 .average()
-                .orElseThrow();
+                .orElse(-1);
     }
 
     private double calculateAvgWaitingTimeRegularCashAmount() {
@@ -272,6 +272,6 @@ public class FastfoodSimulator {
                 .map(CompletableOrder::getCompletionTime)
                 .mapToLong(l -> l)
                 .average()
-                .orElseThrow();
+                .orElse(-1);
     }
 }
