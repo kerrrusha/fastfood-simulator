@@ -6,6 +6,7 @@ import com.kerrrusha.fastfood.simulation.model.OrderType;
 import com.kerrrusha.fastfood.simulation.model.ProcessableOrder;
 import com.kerrrusha.fastfood.util.PriorityQueueV2;
 import com.kerrrusha.fastfood.util.TimeInterval;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -19,6 +20,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Random;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -301,4 +304,10 @@ public class FastfoodSimulator {
                 .average()
                 .orElse(-1);
     }
+
+    @Getter
+    private static class SimulationStats {
+        private final SortedMap<LocalDateTime, Integer> acceptedOrdersQueueSizeHistory = new TreeMap<>();
+    }
+
 }
