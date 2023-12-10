@@ -41,7 +41,7 @@ public abstract class PriorityQueueV2<T> {
         return elements.size();
     }
 
-    private boolean isEmpty() {
+    public boolean isEmpty() {
         return elements.isEmpty();
     }
 }

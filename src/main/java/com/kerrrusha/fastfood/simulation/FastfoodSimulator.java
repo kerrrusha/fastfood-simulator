@@ -127,8 +127,8 @@ public class FastfoodSimulator {
 
     private void doSimulationStep(LocalDateTime startTime, LocalDateTime currentTime) {
         Queue<GeneratedOrder> generatedOrders = Stream.of(
-                        tryGenerateDriveInOrder(startTime, currentTime),
-                        tryGenerateRegularCashOrder(currentTime)
+                        tryGenerateRegularCashOrder(currentTime),
+                        tryGenerateDriveInOrder(startTime, currentTime)
                 )
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -144,18 +144,6 @@ public class FastfoodSimulator {
     }
 
     private void processAcceptedOrders() {
-        GeneratedOrder orderToProcess = acceptedOrdersQueue.peek();
-        if (orderToProcess == null) {
-            return;
-        }
-
-        if (ordersInProcessing.size() > MAX_PARALLEL_ORDERS_IN_PROCESS) {
-            return;
-        }
-
-        acceptedOrdersQueue.remove(orderToProcess);
-        ordersInProcessing.add(new ProcessableOrder(orderToProcess));
-
         for (int i = 0; i < ordersInProcessing.size(); i++) {
             ProcessableOrder orderInProcess = ordersInProcessing.get(i);
             if (Duration.of(orderInProcess.getProcessingTime(TIME_UNIT), TIME_UNIT).compareTo(completeNextOrderAfter) > 0) {
@@ -165,6 +153,22 @@ public class FastfoodSimulator {
                 log.info(orderInProcess.getOrder().orderType() + " order is completed.");
             }
         }
+
+        acceptOrdersToProcessingIfPossible();
+    }
+
+    private void acceptOrdersToProcessingIfPossible() {
+        GeneratedOrder orderToProcess = acceptedOrdersQueue.peek();
+        if (orderToProcess == null) {
+            return;
+        }
+
+        if (ordersInProcessing.size() >= MAX_PARALLEL_ORDERS_IN_PROCESS) {
+            return;
+        }
+
+        acceptedOrdersQueue.remove(orderToProcess);
+        ordersInProcessing.add(new ProcessableOrder(orderToProcess));
     }
 
     private void updateCompleteNextOrderAfter() {
@@ -210,7 +214,7 @@ public class FastfoodSimulator {
         if (!orderAcceptingIsBlocked && acceptedOrdersQueue.size() >= Nwmax) {
             log.info("Blocking order accepting...");
             orderAcceptingIsBlocked = true;
-        } else if (orderAcceptingIsBlocked && acceptedOrdersQueue.size() < Nwmax) {
+        } else if (orderAcceptingIsBlocked && acceptedOrdersQueue.isEmpty()) {
             log.info("Un-blocking order accepting...");
             orderAcceptingIsBlocked = false;
         }
@@ -309,5 +313,4 @@ public class FastfoodSimulator {
     private static class SimulationStats {
         private final SortedMap<LocalDateTime, Integer> acceptedOrdersQueueSizeHistory = new TreeMap<>();
     }
-
 }
