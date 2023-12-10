@@ -267,8 +267,8 @@ public class FastfoodSimulator {
         return result;
     }
 
-    private int getRandomTime(TimeInterval interval) {
-        return random.nextInt(interval.time() - interval.delta(), interval.time() + interval.delta());
+    private long getRandomTime(TimeInterval interval) {
+        return (long) random.nextDouble(interval.time() - interval.delta(), interval.time() + interval.delta());
     }
 
     private LinkedList<GeneratedOrder> getDriveInNewOrdersDeque() {

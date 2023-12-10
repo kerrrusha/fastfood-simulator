@@ -10,7 +10,7 @@ public class FastfoodSimulatorApplication {
         TimeInterval Tdd = new TimeInterval(30, 10);
         TimeInterval Tdp = new TimeInterval(15, 5);
         TimeInterval Tc = new TimeInterval(10, 5);
-        TimeInterval Tp = new TimeInterval(6, 2);
+        TimeInterval Tp = new TimeInterval(8., 2);
         double kStart = 0.4;
         double kEnd = 0.6;
 
